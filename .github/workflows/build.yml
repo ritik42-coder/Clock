@@ -1,0 +1,37 @@
+name: Build APK from ZIP
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: |
+          ZIP=$(ls *.zip | head -n1)
+          mkdir -p proj
+          unzip -q "$ZIP" -d proj
+          DIR=$(dirname "$(find proj -name settings.gradle.kts | head -n1)")
+          echo "PROJ=$DIR" >> $GITHUB_ENV
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Build APK
+        working-directory: ${{ env.PROJ }}
+        run: gradle assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChronoX-APK
+          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
